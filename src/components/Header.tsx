@@ -1,5 +1,6 @@
-import { Calendar, Settings, User } from "lucide-react";
+import { Calendar, Settings, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,18 +10,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface HeaderProps {
-  userType: 'student' | 'teacher' | 'staff' | 'librarian';
-  userName: string;
-}
+export function Header() {
+  const { profile, signOut } = useAuth();
 
-export function Header({ userType, userName }: HeaderProps) {
   const getUserTypeLabel = (type: string) => {
     switch (type) {
       case 'student': return 'Aluno';
       case 'teacher': return 'Professor';
       case 'staff': return 'Colaborador';
-      case 'librarian': return 'Bibliotecário';
+      case 'library_admin': return 'Bibliotecário';
       default: return 'Usuário';
     }
   };
@@ -41,13 +39,15 @@ export function Header({ userType, userName }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="hidden md:flex items-center space-x-2 text-sm">
-            <span className="text-muted-foreground">Bem-vindo,</span>
-            <span className="font-medium">{userName}</span>
-            <span className="text-xs px-2 py-1 bg-accent rounded-full text-accent-foreground">
-              {getUserTypeLabel(userType)}
-            </span>
-          </div>
+          {profile && (
+            <div className="hidden md:flex items-center space-x-2 text-sm">
+              <span className="text-muted-foreground">Bem-vindo,</span>
+              <span className="font-medium">{profile.full_name}</span>
+              <span className="text-xs px-2 py-1 bg-accent rounded-full text-accent-foreground">
+                {getUserTypeLabel(profile.role)}
+              </span>
+            </div>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -66,14 +66,15 @@ export function Header({ userType, userName }: HeaderProps) {
                 <Calendar className="mr-2 h-4 w-4" />
                 Minhas Reservas
               </DropdownMenuItem>
-              {(userType === 'librarian') && (
+              {(profile?.role === 'library_admin') && (
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   Administração
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem className="text-destructive" onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>

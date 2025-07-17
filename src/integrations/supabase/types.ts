@@ -14,7 +14,167 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      equipment: {
+        Row: {
+          created_at: string
+          id: string
+          identifier: string
+          is_available: boolean
+          last_maintenance: string | null
+          type: Database["public"]["Enums"]["equipment_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identifier: string
+          is_available?: boolean
+          last_maintenance?: string | null
+          type: Database["public"]["Enums"]["equipment_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identifier?: string
+          is_available?: boolean
+          last_maintenance?: string | null
+          type?: Database["public"]["Enums"]["equipment_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      equipment_reservations: {
+        Row: {
+          created_at: string
+          equipment_id: string
+          id: string
+          pickup_time: string
+          purpose: string | null
+          reservation_date: string
+          return_time: string
+          shift: Database["public"]["Enums"]["shift_type"]
+          status: Database["public"]["Enums"]["reservation_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          equipment_id: string
+          id?: string
+          pickup_time: string
+          purpose?: string | null
+          reservation_date: string
+          return_time: string
+          shift: Database["public"]["Enums"]["shift_type"]
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string
+          id?: string
+          pickup_time?: string
+          purpose?: string | null
+          reservation_date?: string
+          return_time?: string
+          shift?: Database["public"]["Enums"]["shift_type"]
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_reservations_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          registration_number: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          registration_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          registration_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      space_reservations: {
+        Row: {
+          created_at: string
+          end_time: string
+          group_members: string[]
+          group_size: number
+          id: string
+          purpose: string
+          reservation_date: string
+          space_type: Database["public"]["Enums"]["space_type"]
+          start_time: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          group_members?: string[]
+          group_size: number
+          id?: string
+          purpose: string
+          reservation_date: string
+          space_type: Database["public"]["Enums"]["space_type"]
+          start_time: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          group_members?: string[]
+          group_size?: number
+          id?: string
+          purpose?: string
+          reservation_date?: string
+          space_type?: Database["public"]["Enums"]["space_type"]
+          start_time?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +183,11 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      equipment_type: "tablet" | "notebook" | "vr_glasses"
+      reservation_status: "pending" | "confirmed" | "cancelled" | "completed"
+      shift_type: "morning" | "afternoon" | "night"
+      space_type: "study_room" | "general_space"
+      user_role: "student" | "teacher" | "staff" | "library_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +314,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      equipment_type: ["tablet", "notebook", "vr_glasses"],
+      reservation_status: ["pending", "confirmed", "cancelled", "completed"],
+      shift_type: ["morning", "afternoon", "night"],
+      space_type: ["study_room", "general_space"],
+      user_role: ["student", "teacher", "staff", "library_admin"],
+    },
   },
 } as const
