@@ -3,16 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-export type SpaceType = 'study-room' | 'main-space';
+// Alinhado com o enum do Supabase: 'study_room' e 'general_space'
+export type SpaceType = 'study_room' | 'general_space';
 
 interface SpaceCardProps {
-  type: SpaceType;
+  type: SpaceType; // Agora SpaceType usa os nomes corretos
   isAvailable: boolean;
-  onReserve: () => void;
+  onReserve: (type: SpaceType) => void; // A função onReserve agora passa o SpaceType correto
 }
 
 const spaceConfig = {
-  'study-room': {
+  'study_room': { // Alterado de 'study-room' para 'study_room'
     name: 'Sala de Estudo',
     icon: Users,
     color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
@@ -21,7 +22,7 @@ const spaceConfig = {
     duration: '30min - 4h',
     schedule: '08h00 - 20h00 (Intervalo: 12h00-13h00)'
   },
-  'main-space': {
+  'general_space': { // Alterado de 'main-space' para 'general_space'
     name: 'Espaço Geral',
     icon: BookOpen,
     color: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
@@ -33,7 +34,7 @@ const spaceConfig = {
 };
 
 export function SpaceCard({ type, isAvailable, onReserve }: SpaceCardProps) {
-  const config = spaceConfig[type];
+  const config = spaceConfig[type]; // 'type' agora corresponde às chaves
   const Icon = config.icon;
 
   return (
@@ -86,7 +87,7 @@ export function SpaceCard({ type, isAvailable, onReserve }: SpaceCardProps) {
           variant="hero" 
           className="w-full" 
           disabled={!isAvailable}
-          onClick={onReserve}
+          onClick={() => onReserve(type)} // Passando o 'type' para a função onReserve
         >
           {isAvailable ? 'Reservar Espaço' : 'Indisponível'}
         </Button>

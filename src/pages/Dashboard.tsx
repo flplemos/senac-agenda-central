@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
-import { EquipmentCard, EquipmentType } from "@/components/EquipmentCard";
-import { SpaceCard, SpaceType } from "@/components/SpaceCard";
+import { EquipmentCard, EquipmentType } from "@/components/EquipmentCard"; // EquipmentType foi atualizado
+import { SpaceCard, SpaceType } from "@/components/SpaceCard"; // SpaceType foi atualizado
 import { QuickStats } from "@/components/QuickStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,40 +9,155 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, History, PlusCircle } from "lucide-react";
 import heroImage from "@/assets/library-hero.jpg";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables, Enums } from "@/integrations/supabase/types"; // Importe os tipos do Supabase
+import { format } from "date-fns"; // Para formatar datas
 
 export default function Dashboard() {
   const { toast } = useToast();
+
+  const [equipments, setEquipments] = useState<Tables<'equipment'>[]>([]);
+  const [equipmentAvailability, setEquipmentAvailability] = useState<Record<EquipmentType, { total: number; available: number }>>({
+    tablet: { total: 0, available: 0 },
+    notebook: { total: 0, available: 0 },
+    vr_glasses: { total: 0, available: 0 }, // Usamos 'vr_glasses' para corresponder ao enum do Supabase
+  });
+  const [loadingEquipment, setLoadingEquipment] = useState(true);
   
-  // Mock data - in a real app this would come from an API
-  const [equipmentData] = useState({
-    tablet: { total: 30, available: 18 },
-    notebook: { total: 19, available: 7 },
-    vr: { total: 15, available: 12 }
+  const [spaces, setSpaces] = useState<Tables<'space_reservations'>[]>([]);
+  const [spaceAvailability, setSpaceAvailability] = useState<Record<SpaceType, boolean>>({
+    study_room: true, // Chaves agora alinhadas com o enum Supabase
+    general_space: true, // Chaves agora alinhadas com o enum Supabase
   });
+  const [loadingSpaces, setLoadingSpaces] = useState(true);
 
-  const [spaceData] = useState({
-    'study-room': true,
-    'main-space': false
+
+  const [statsData, setStatsData] = useState({
+    totalReservations: 0,
+    activeReservations: 0,
+    hoursReserved: 0,
+    equipmentInUse: 0,
   });
+  const [loadingStats, setLoadingStats] = useState(true);
 
-  const statsData = {
-    totalReservations: 47,
-    activeReservations: 12,
-    hoursReserved: 156,
-    equipmentInUse: 23
-  };
 
-  const handleEquipmentReserve = (type: EquipmentType) => {
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoadingEquipment(true);
+      setLoadingSpaces(true);
+      setLoadingStats(true);
+      try {
+        // --- Busca de Equipamentos ---
+        const { data: equipmentData, error: equipmentError } = await supabase
+          .from('equipment')
+          .select('*');
+
+        if (equipmentError) throw equipmentError;
+        setEquipments(equipmentData);
+
+        const currentEquipmentAvailability: Record<EquipmentType, { total: number; available: number }> = {
+          tablet: { total: 0, available: 0 },
+          notebook: { total: 0, available: 0 },
+          vr_glasses: { total: 0, available: 0 },
+        };
+
+        equipmentData.forEach(eq => {
+          currentEquipmentAvailability[eq.type].total++;
+          if (eq.is_available) {
+            currentEquipmentAvailability[eq.type].available++;
+          }
+        });
+        setEquipmentAvailability(currentEquipmentAvailability);
+
+
+        // --- Busca de Espaços ---
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const { data: spaceReservationsData, error: spaceReservationsError } = await supabase
+          .from('space_reservations')
+          .select('*')
+          .eq('reservation_date', today)
+          .in('status', ['pending', 'confirmed']);
+
+        if (spaceReservationsError) throw spaceReservationsError;
+        
+        const currentSpaceAvailability: Record<SpaceType, boolean> = {
+          study_room: true,
+          general_space: true,
+        };
+
+        spaceReservationsData.forEach(res => {
+          currentSpaceAvailability[res.space_type] = false;
+        });
+        setSpaceAvailability(currentSpaceAvailability);
+
+
+        // --- Busca de Estatísticas ---
+        const { count: totalEqResCount, error: totalEqResError } = await supabase
+          .from('equipment_reservations')
+          .select('*', { count: 'exact', head: true });
+        if (totalEqResError) console.error("Erro ao buscar total de reservas de equipamentos:", totalEqResError);
+
+        const { count: totalSpaceResCount, error: totalSpaceResError } = await supabase
+            .from('space_reservations')
+            .select('*', { count: 'exact', head: true });
+        if (totalSpaceResCount) console.error("Erro ao buscar total de reservas de espaços:", totalSpaceResCount);
+
+
+        const { count: activeEqResCount, error: activeEqResError } = await supabase
+          .from('equipment_reservations')
+          .select('*', { count: 'exact', head: true })
+          .eq('reservation_date', today)
+          .in('status', ['pending', 'confirmed']);
+        if (activeEqResError) console.error("Erro ao buscar reservas ativas de equipamentos:", activeEqResError);
+        
+        const { count: activeSpaceResCount, error: activeSpaceResError } = await supabase
+            .from('space_reservations')
+            .select('*', { count: 'exact', head: true })
+            .eq('reservation_date', today)
+            .in('status', ['pending', 'confirmed']);
+        if (activeSpaceResError) console.error("Erro ao buscar reservas ativas de espaços:", activeSpaceResError);
+
+
+        const estimatedHoursReserved = ((activeEqResCount || 0) * 4) + ((activeSpaceResCount || 0) * 3);
+        const estimatedEquipmentInUse = (activeEqResCount || 0);
+
+
+        setStatsData({
+          totalReservations: (totalEqResCount || 0) + (totalSpaceResCount || 0),
+          activeReservations: (activeEqResCount || 0) + (activeSpaceResCount || 0),
+          hoursReserved: estimatedHoursReserved,
+          equipmentInUse: estimatedEquipmentInUse,
+        });
+
+      } catch (error: any) {
+        console.error("Erro ao carregar dados do Dashboard:", error.message);
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar as informações da biblioteca. " + error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingEquipment(false);
+        setLoadingSpaces(false);
+        setLoadingStats(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [toast]);
+
+
+  const handleEquipmentReserve = (type: EquipmentType) => { // Type agora é EquipmentType correto
     toast({
-      title: "Reserva iniciada",
-      description: `Iniciando processo de reserva para ${type === 'tablet' ? 'Tablet' : type === 'notebook' ? 'Notebook' : 'Óculos VR'}`,
+      title: "Funcionalidade em Construção",
+      description: `Formulário de reserva para ${type === 'tablet' ? 'Tablets' : type === 'notebook' ? 'Notebooks' : 'Óculos VR'} será implementado aqui.`,
     });
   };
 
-  const handleSpaceReserve = (type: SpaceType) => {
+  const handleSpaceReserve = (type: SpaceType) => { // Type agora é SpaceType correto
     toast({
-      title: "Reserva de espaço",
-      description: `Iniciando reserva para ${type === 'study-room' ? 'Sala de Estudo' : 'Espaço Geral'}`,
+      title: "Funcionalidade em Construção",
+      description: `Formulário de reserva para ${type === 'study_room' ? 'Sala de Estudo' : 'Espaço Geral'} será implementado aqui.`, // Comparação corrigida
     });
   };
 
@@ -51,7 +166,7 @@ export default function Dashboard() {
       <Header />
       
       <main className="container mx-auto px-4 py-6 space-y-8">
-        {/* Hero Section */}
+        {/* Hero Section (inalterado) */}
         <section className="relative overflow-hidden rounded-2xl bg-gradient-primary p-8 text-white">
           <div className="absolute inset-0 bg-black/20" />
           <div 
@@ -79,8 +194,17 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Quick Stats */}
-        <QuickStats data={statsData} />
+        {/* Quick Stats - AGORA COM DADOS REAIS OU BASICAMENTE CALCULADOS */}
+        {loadingStats ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Esqueletos de carregamento para as estatísticas */}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="relative overflow-hidden h-[120px] animate-pulse bg-muted-foreground/10" />
+            ))}
+          </div>
+        ) : (
+          <QuickStats data={statsData} />
+        )}
 
         {/* Main Content */}
         <Tabs defaultValue="equipment" className="space-y-6">
@@ -101,24 +225,35 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <EquipmentCard
-                type="tablet"
-                totalUnits={equipmentData.tablet.total}
-                availableUnits={equipmentData.tablet.available}
-                onReserve={() => handleEquipmentReserve('tablet')}
-              />
-              <EquipmentCard
-                type="notebook"
-                totalUnits={equipmentData.notebook.total}
-                availableUnits={equipmentData.notebook.available}
-                onReserve={() => handleEquipmentReserve('notebook')}
-              />
-              <EquipmentCard
-                type="vr"
-                totalUnits={equipmentData.vr.total}
-                availableUnits={equipmentData.vr.available}
-                onReserve={() => handleEquipmentReserve('vr')}
-              />
+              {loadingEquipment ? (
+                <>
+                  {/* Esqueletos de carregamento para os cards de equipamento */}
+                  <Card className="equipment-card h-[280px] animate-pulse bg-muted-foreground/10" />
+                  <Card className="equipment-card h-[280px] animate-pulse bg-muted-foreground/10" />
+                  <Card className="equipment-card h-[280px] animate-pulse bg-muted-foreground/10" />
+                </>
+              ) : (
+                <>
+                  <EquipmentCard
+                    type="tablet"
+                    totalUnits={equipmentAvailability.tablet.total}
+                    availableUnits={equipmentAvailability.tablet.available}
+                    onReserve={() => handleEquipmentReserve('tablet')}
+                  />
+                  <EquipmentCard
+                    type="notebook"
+                    totalUnits={equipmentAvailability.notebook.total}
+                    availableUnits={equipmentAvailability.notebook.available}
+                    onReserve={() => handleEquipmentReserve('notebook')}
+                  />
+                  <EquipmentCard
+                    type="vr_glasses" // Agora o tipo passado é o correto do enum
+                    totalUnits={equipmentAvailability.vr_glasses.total}
+                    availableUnits={equipmentAvailability.vr_glasses.available}
+                    onReserve={() => handleEquipmentReserve('vr_glasses')} // Passando o tipo correto para a função
+                  />
+                </>
+              )}
             </div>
 
             <Card className="booking-card">
@@ -161,16 +296,26 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SpaceCard
-                type="study-room"
-                isAvailable={spaceData['study-room']}
-                onReserve={() => handleSpaceReserve('study-room')}
-              />
-              <SpaceCard
-                type="main-space"
-                isAvailable={spaceData['main-space']}
-                onReserve={() => handleSpaceReserve('main-space')}
-              />
+              {loadingSpaces ? (
+                <>
+                  {/* Esqueletos de carregamento para os cards de espaço */}
+                  <Card className="equipment-card h-[280px] animate-pulse bg-muted-foreground/10" />
+                  <Card className="equipment-card h-[280px] animate-pulse bg-muted-foreground/10" />
+                </>
+              ) : (
+                <>
+                  <SpaceCard
+                    type="study_room" // Agora o tipo passado é o correto do enum
+                    isAvailable={spaceAvailability.study_room}
+                    onReserve={() => handleSpaceReserve('study_room')}
+                  />
+                  <SpaceCard
+                    type="general_space" // Agora o tipo passado é o correto do enum
+                    isAvailable={spaceAvailability.general_space}
+                    onReserve={() => handleSpaceReserve('general_space')}
+                  />
+                </>
+              )}
             </div>
           </TabsContent>
 

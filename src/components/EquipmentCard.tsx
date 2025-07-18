@@ -3,38 +3,39 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-export type EquipmentType = 'tablet' | 'notebook' | 'vr';
+// Alinhado com o enum do Supabase: 'tablet', 'notebook', 'vr_glasses'
+export type EquipmentType = 'tablet' | 'notebook' | 'vr_glasses';
 
 interface EquipmentCardProps {
-  type: EquipmentType;
+  type: EquipmentType; // Agora EquipmentType usa os nomes corretos
   totalUnits: number;
   availableUnits: number;
-  onReserve: () => void;
+  onReserve: (type: EquipmentType) => void; // A função onReserve agora passa o EquipmentType correto
 }
 
 const equipmentConfig = {
-  tablet: {
+  'tablet': {
     name: 'Tablets',
     icon: Tablet,
     color: 'bg-tablet/10 text-tablet border-tablet/20',
     description: 'Ideais para leitura digital e pesquisa'
   },
-  notebook: {
+  'notebook': {
     name: 'Notebooks',
     icon: Laptop,
     color: 'bg-notebook/10 text-notebook border-notebook/20',
     description: 'Perfeitos para estudos e trabalhos acadêmicos'
   },
-  vr: {
+  'vr_glasses': { // Alterado de 'vr' para 'vr_glasses'
     name: 'Óculos VR',
     icon: Glasses,
-    color: 'bg-vr/10 text-vr border-vr/20',
+    color: 'bg-vr/10 text-vr border-vr/20', // Mantém a cor 'vr' definida no tailwind.config.ts
     description: 'Experiências imersivas de aprendizado'
   }
 };
 
 export function EquipmentCard({ type, totalUnits, availableUnits, onReserve }: EquipmentCardProps) {
-  const config = equipmentConfig[type];
+  const config = equipmentConfig[type]; // 'type' agora corresponde às chaves
   const Icon = config.icon;
   const availability = (availableUnits / totalUnits) * 100;
   
@@ -57,7 +58,7 @@ export function EquipmentCard({ type, totalUnits, availableUnits, onReserve }: E
             {status.label}
           </Badge>
         </div>
-        <CardTitle className="text-lg">{config.name}</CardTitle>
+        <CardTitle className="lg">{config.name}</CardTitle>
         <CardDescription>{config.description}</CardDescription>
       </CardHeader>
 
@@ -96,7 +97,7 @@ export function EquipmentCard({ type, totalUnits, availableUnits, onReserve }: E
           variant="hero" 
           className="w-full" 
           disabled={availableUnits === 0}
-          onClick={onReserve}
+          onClick={() => onReserve(type)} // Passando o 'type' para a função onReserve
         >
           {availableUnits === 0 ? 'Indisponível' : 'Reservar Agora'}
         </Button>
