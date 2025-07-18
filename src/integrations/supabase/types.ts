@@ -180,7 +180,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      // ESTAS SÃO AS DEFINIÇÕES DE FUNÇÕES ADICIONADAS MANUALMENTE
+      criar_reserva_equipamento_com_regras: {
+        Args: {
+          p_user_id: string;
+          p_equipment_id: string;
+          p_reservation_date: string;
+          p_shift: Database["public"]["Enums"]["shift_type"];
+          p_pickup_time: string;
+          p_return_time: string;
+          p_purpose: string;
+        };
+        Returns: Tables<'equipment_reservations'>;
+      };
+      is_library_admin: {
+        Args: Record<PropertyKey, never>; // Esta função não recebe argumentos
+        Returns: boolean;
+      };
+      // Você adicionaria outras funções RPC aqui, se tivesse mais
     }
     Enums: {
       equipment_type: "tablet" | "notebook" | "vr_glasses"
@@ -311,15 +328,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      equipment_type: ["tablet", "notebook", "vr_glasses"],
-      reservation_status: ["pending", "confirmed", "cancelled", "completed"],
-      shift_type: ["morning", "afternoon", "night"],
-      space_type: ["study_room", "general_space"],
-      user_role: ["student", "teacher", "staff", "library_admin"],
-    },
-  },
-} as const
